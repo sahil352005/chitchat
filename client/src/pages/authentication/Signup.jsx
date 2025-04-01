@@ -31,7 +31,7 @@ const Signup = () => {
 
   const handleSignup = async () => {
     if (signupData.password !== signupData.confirmPassword) {
-      return toast.error("Password and confirm password do not match");
+      return toast.error("Password and confirm password do not match plz check");
     }
     const response = await dispatch(registerUserThunk(signupData));
     if (response?.payload?.success) {
