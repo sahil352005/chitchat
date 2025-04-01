@@ -5,3 +5,6 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
 })
+
+const API_URL = "https://chitchat1.vercel.app";
+fetch(`${API_URL}/api/messages`);
