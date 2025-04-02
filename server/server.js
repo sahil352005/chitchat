@@ -1,10 +1,11 @@
 import { app, server } from "./socket/socket.js";
 import express from "express";
-import { connectDB } from "./db/connection1.db.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";
+import { initializeDynamoDB } from "./utilities/dynamodb.utility.js";
 
-connectDB();
+// Initialize DynamoDB
+initializeDynamoDB().catch(console.error);
 
 app.use(
   cors({

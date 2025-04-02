@@ -1,20 +1,43 @@
-import mongoose from 'mongoose';
+import { PutCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
+import { docClient } from "../db/config/dynamodb.config.js";
+import { v4 as uuidv4 } from "uuid";
 
-const messageSchema = new mongoose.Schema({
-    senderId:{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required:true,
-    },
-    receiverId:{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required:true,
-    },
-    message:{
-        type:String,
-        required:true,
+const TableName = "Messages";
+
+export const createMessage = async (messageData) => {
+  const messageId = uuidv4();
+  const timestamp = new Date().toISOString();
+
+  const command = new PutCommand({
+    TableName,
+    Item: {
+      messageId,
+      conversationId: `${messageData.senderId}_${messageData.receiverId}`,
+      senderId: messageData.senderId,
+      receiverId: messageData.receiverId,
+      message: messageData.message,
+      createdAt: timestamp
     }
-},{timestamps:true})
+  });
 
-export default mongoose.model('Message', messageSchema);
+  await docClient.send(command);
+  return {
+    messageId,
+    ...messageData,
+    createdAt: timestamp
+  };
+};
+
+export const getMessages = async (senderId, receiverId) => {
+  const command = new QueryCommand({
+    TableName,
+    KeyConditionExpression: "conversationId = :convId",
+    ExpressionAttributeValues: {
+      ":convId": `${senderId}_${receiverId}`
+    },
+    ScanIndexForward: false
+  });
+
+  const result = await docClient.send(command);
+  return result.Items;
+};
