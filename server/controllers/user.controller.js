@@ -1,140 +1,131 @@
-import User from "../models/user.model.js";
-import { asyncHandler } from "../utilities/asyncHandler.utility.js";
-import { errorHandler } from "../utilities/errorHandler.utility.js";
+import { createUser, getUserByUsername, getUserById, getOtherUsers } from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
-export const register = asyncHandler(async (req, res, next) => {
-  const { fullName, username, password, gender } = req.body;
+export const register = async (req, res, next) => {
+  try {
+    const { username, password, fullName, gender } = req.body;
+    
+    // Check if user already exists
+    const existingUser = await getUserByUsername(username);
+    if (existingUser) {
+      return res.status(400).json({ message: "Username already exists" });
+    }
 
-  if (!fullName || !username || !password || !gender) {
-    return next(new errorHandler("All fields are required", 400));
-  }
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-  const user = await User.findOne({ username });
-  if (user) {
-    return next(new errorHandler("User already exists", 400));
-  }
-
-  const hashedPassword = await bcrypt.hash(password, 10);
-
-  const avatarType = gender === "male" ? "boy" : "girl";
-  const avatar = `https://avatar.iran.liara.run/public/${avatarType}?username=${username}`;
-
-  const newUser = await User.create({
-    username,
-    fullName,
-    password: hashedPassword,
-    gender,
-    avatar,
-  });
-
-  const tokenData = {
-    _id: newUser?._id,
-  };
-
-  const token = jwt.sign(tokenData, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES,
-  });
-
-  res
-    .status(200)
-    .cookie("token", token, {
-      expires: new Date(
-        Date.now() + process.env.COOKIE_EXPIRES * 24 * 60 * 60 * 1000
-      ),
-      httpOnly: true,
-      secure: true,
-      sameSite: "None",
-    })
-    .json({
-      success: true,
-      responseData: {
-        newUser,
-        token,
-      },
+    // Create user
+    const user = await createUser({
+      username,
+      password: hashedPassword,
+      fullName,
+      gender,
+      avatar: `https://avatar.iran.liara.run/public/${gender === "male" ? "boy" : "girl"}?username=${username}`
     });
-});
 
-export const login = asyncHandler(async (req, res, next) => {
-  const { username, password } = req.body;
-
-  if (!username || !password) {
-    return next(
-      new errorHandler("Please enter a valid username or password", 400)
-    );
-  }
-
-  const user = await User.findOne({ username });
-  if (!user) {
-    return next(
-      new errorHandler("Please enter a valid username or password", 400)
-    );
-  }
-
-  const isValidPassword = await bcrypt.compare(password, user.password);
-  if (!isValidPassword) {
-    return next(
-      new errorHandler("Please enter a valid username or password", 400)
-    );
-  }
-
-  const tokenData = {
-    _id: user?._id,
-  };
-
-  const token = jwt.sign(tokenData, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES,
-  });
-
-  res
-    .status(200)
-    .cookie("token", token, {
-      expires: new Date(
-        Date.now() + process.env.COOKIE_EXPIRES * 24 * 60 * 60 * 1000
-      ),
-      httpOnly: true,
-      secure: true,
-      sameSite: "None",
-    })
-    .json({
-      success: true,
-      responseData: {
-        user,
-        token,
-      },
+    // Generate JWT token
+    const token = jwt.sign({ userId: user.userId }, process.env.JWT_SECRET, {
+      expiresIn: process.env.JWT_EXPIRES
     });
-});
 
-export const getProfile = asyncHandler(async (req, res, next) => {
-  const userId = req.user._id;
-
-  const profile = await User.findById(userId);
-
-  res.status(200).json({
-    success: true,
-    responseData: profile,
-  });
-});
-
-export const logout = asyncHandler(async (req, res, next) => {
-  res
-    .status(200)
-    .cookie("token", "", {
-      expires: new Date(Date.now()),
+    // Set cookie
+    res.cookie("token", token, {
       httpOnly: true,
-    })
-    .json({
-      success: true,
-      message: "Logout successfull!",
+      maxAge: process.env.COOKIE_EXPIRES * 24 * 60 * 60 * 1000
     });
-});
 
-export const getOtherUsers = asyncHandler(async (req, res, next) => {
-  const otherUsers = await User.find({ _id: { $ne: req.user._id } });
+    res.status(201).json({
+      message: "User registered successfully",
+      user: {
+        userId: user.userId,
+        username: user.username,
+        fullName: user.fullName,
+        gender: user.gender,
+        avatar: user.avatar
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
-  res.status(200).json({
-    success: true,
-    responseData: otherUsers,
-  });
-});
+export const login = async (req, res, next) => {
+  try {
+    const { username, password } = req.body;
+
+    // Find user
+    const user = await getUserByUsername(username);
+    if (!user) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    // Check password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    // Generate JWT token
+    const token = jwt.sign({ userId: user.userId }, process.env.JWT_SECRET, {
+      expiresIn: process.env.JWT_EXPIRES
+    });
+
+    // Set cookie
+    res.cookie("token", token, {
+      httpOnly: true,
+      maxAge: process.env.COOKIE_EXPIRES * 24 * 60 * 60 * 1000
+    });
+
+    res.json({
+      message: "Login successful",
+      user: {
+        userId: user.userId,
+        username: user.username,
+        fullName: user.fullName,
+        gender: user.gender,
+        avatar: user.avatar
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getProfile = async (req, res, next) => {
+  try {
+    const user = await getUserById(req.user.userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json({
+      user: {
+        userId: user.userId,
+        username: user.username,
+        fullName: user.fullName,
+        gender: user.gender,
+        avatar: user.avatar
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getOtherUsersList = async (req, res, next) => {
+  try {
+    const users = await getOtherUsers(req.user.userId);
+    res.json({
+      users: users.map(user => ({
+        userId: user.userId,
+        username: user.username,
+        fullName: user.fullName,
+        gender: user.gender,
+        avatar: user.avatar
+      }))
+    });
+  } catch (error) {
+    next(error);
+  }
+};

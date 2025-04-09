@@ -1,13 +1,15 @@
 import express from "express";
-import { getOtherUsers, getProfile, login, logout, register } from "../controllers/user.controller.js";
-import { isAuthenticated } from "../middlewares/auth.middlware.js";
+import { register, login, getProfile, getOtherUsersList } from "../controllers/user.controller.js";
+import { isAuthenticated } from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
 
+// Public routes
 router.post("/register", register);
 router.post("/login", login);
-router.post("/logout", isAuthenticated, logout);
-router.get("/get-profile", isAuthenticated, getProfile);
-router.get("/get-other-users", isAuthenticated, getOtherUsers);
+
+// Protected routes
+router.get("/profile", isAuthenticated, getProfile);
+router.get("/users", isAuthenticated, getOtherUsersList);
 
 export default router;

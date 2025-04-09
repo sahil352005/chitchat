@@ -1,10 +1,10 @@
 import { PutCommand, GetCommand, QueryCommand, ScanCommand } from "@aws-sdk/lib-dynamodb";
-import { docClient } from "../db/dynamodb.config.js";
+import dynamoDB from "../db/dynamodb.config.js";
 import { v4 as uuidv4 } from "uuid";
 
-const TableName = "Users";
+const TableName = process.env.DYNAMODB_TABLE_PREFIX + "Users";
 
-export const createUser = async (userData) => {
+const createUser = async (userData) => {
   const userId = uuidv4();
   const command = new PutCommand({
     TableName,
@@ -20,11 +20,11 @@ export const createUser = async (userData) => {
     ConditionExpression: "attribute_not_exists(username)"
   });
 
-  await docClient.send(command);
+  await dynamoDB.send(command);
   return { userId, ...userData };
 };
 
-export const getUserByUsername = async (username) => {
+const getUserByUsername = async (username) => {
   const command = new QueryCommand({
     TableName,
     IndexName: "UsernameIndex",
@@ -34,21 +34,21 @@ export const getUserByUsername = async (username) => {
     }
   });
 
-  const result = await docClient.send(command);
+  const result = await dynamoDB.send(command);
   return result.Items[0];
 };
 
-export const getUserById = async (userId) => {
+const getUserById = async (userId) => {
   const command = new GetCommand({
     TableName,
     Key: { userId }
   });
 
-  const result = await docClient.send(command);
+  const result = await dynamoDB.send(command);
   return result.Item;
 };
 
-export const getOtherUsers = async (currentUserId) => {
+const getOtherUsers = async (currentUserId) => {
   const command = new ScanCommand({
     TableName,
     FilterExpression: "userId <> :currentUserId",
@@ -57,6 +57,13 @@ export const getOtherUsers = async (currentUserId) => {
     }
   });
 
-  const result = await docClient.send(command);
+  const result = await dynamoDB.send(command);
   return result.Items;
+};
+
+export {
+  createUser,
+  getUserByUsername,
+  getUserById,
+  getOtherUsers
 };
