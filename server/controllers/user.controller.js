@@ -6,9 +6,15 @@ export const register = async (req, res, next) => {
   try {
     const { username, password, fullName, gender } = req.body;
     
+    if (!username || !password || !fullName || !gender) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
     // Check if user already exists
+    console.log('Checking for existing user:', username);
     const existingUser = await getUserByUsername(username);
     if (existingUser) {
+      console.log('User already exists:', username);
       return res.status(400).json({ message: "Username already exists" });
     }
 
@@ -16,6 +22,7 @@ export const register = async (req, res, next) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create user
+    console.log('Creating new user:', { username, fullName, gender });
     const user = await createUser({
       username,
       password: hashedPassword,
@@ -23,6 +30,7 @@ export const register = async (req, res, next) => {
       gender,
       avatar: `https://avatar.iran.liara.run/public/${gender === "male" ? "boy" : "girl"}?username=${username}`
     });
+    console.log('User created successfully:', user.userId);
 
     // Generate JWT token
     const token = jwt.sign({ userId: user.userId }, process.env.JWT_SECRET, {
@@ -37,6 +45,7 @@ export const register = async (req, res, next) => {
 
     res.status(201).json({
       message: "User registered successfully",
+      token,
       user: {
         userId: user.userId,
         username: user.username,
@@ -46,6 +55,7 @@ export const register = async (req, res, next) => {
       }
     });
   } catch (error) {
+    console.error('Registration error:', error);
     next(error);
   }
 };
@@ -53,6 +63,10 @@ export const register = async (req, res, next) => {
 export const login = async (req, res, next) => {
   try {
     const { username, password } = req.body;
+
+    if (!username || !password) {
+      return res.status(400).json({ message: "Username and password are required" });
+    }
 
     // Find user
     const user = await getUserByUsername(username);
@@ -79,6 +93,7 @@ export const login = async (req, res, next) => {
 
     res.json({
       message: "Login successful",
+      token,
       user: {
         userId: user.userId,
         username: user.username,
@@ -88,6 +103,7 @@ export const login = async (req, res, next) => {
       }
     });
   } catch (error) {
+    console.error('Login error:', error);
     next(error);
   }
 };

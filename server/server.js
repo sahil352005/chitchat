@@ -45,15 +45,18 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
 
-// Update cookie settings in auth responses
+// Cookie settings middleware
 app.use((req, res, next) => {
-  res.cookie = res.cookie.bind(res);
-  res.cookie.originalSet = res.cookie;
+  const originalCookie = res.cookie;
   res.cookie = function(name, value, options = {}) {
-    options.sameSite = 'strict';
-    options.secure = process.env.NODE_ENV === 'production';
-    options.httpOnly = true;
-    return res.cookie.originalSet(name, value, options);
+    const defaultOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/',
+      maxAge: 24 * 60 * 60 * 1000 // 1 day
+    };
+    return originalCookie.call(this, name, value, { ...defaultOptions, ...options });
   };
   next();
 });

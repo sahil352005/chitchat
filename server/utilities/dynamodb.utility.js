@@ -1,8 +1,8 @@
 import { CreateTableCommand, DescribeTableCommand } from "@aws-sdk/client-dynamodb";
-import dynamoDB from "../db/dynamodb.config.js";
+import { docClient } from "../db/config/dynamodb.config.js";
 
-const UsersTableName = process.env.DYNAMODB_TABLE_PREFIX + "Users";
-const MessagesTableName = process.env.DYNAMODB_TABLE_PREFIX + "Messages";
+const UsersTableName = (process.env.DYNAMODB_TABLE_PREFIX || "chitchat_") + "Users";
+const MessagesTableName = (process.env.DYNAMODB_TABLE_PREFIX || "chitchat_") + "Messages";
 
 const createUsersTable = async () => {
   const command = new CreateTableCommand({
@@ -35,7 +35,7 @@ const createUsersTable = async () => {
     },
   });
 
-  await dynamoDB.send(command);
+  await docClient.send(command);
   console.log(`Table ${UsersTableName} created successfully`);
 };
 
@@ -72,7 +72,7 @@ const createMessagesTable = async () => {
     },
   });
 
-  await dynamoDB.send(command);
+  await docClient.send(command);
   console.log(`Table ${MessagesTableName} created successfully`);
 };
 
@@ -80,7 +80,7 @@ export const initializeDynamoDB = async () => {
   try {
     // Check and create Users table
     try {
-      await dynamoDB.send(new DescribeTableCommand({ TableName: UsersTableName }));
+      await docClient.send(new DescribeTableCommand({ TableName: UsersTableName }));
       console.log(`Table ${UsersTableName} already exists`);
     } catch (error) {
       if (error.name === 'ResourceNotFoundException') {
@@ -92,7 +92,7 @@ export const initializeDynamoDB = async () => {
 
     // Check and create Messages table
     try {
-      await dynamoDB.send(new DescribeTableCommand({ TableName: MessagesTableName }));
+      await docClient.send(new DescribeTableCommand({ TableName: MessagesTableName }));
       console.log(`Table ${MessagesTableName} already exists`);
     } catch (error) {
       if (error.name === 'ResourceNotFoundException') {

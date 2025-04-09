@@ -10,11 +10,11 @@ export const loginUserThunk = createAsyncThunk(
         username,
         password,
       });
-      toast.success("Login successfull!");
+      toast.success("Login successful!");
       return response.data;
     } catch (error) {
       console.error(error);
-      const errorOutput = error?.response?.data?.errMessage;
+      const errorOutput = error?.response?.data?.message || "Login failed";
       toast.error(errorOutput);
       return rejectWithValue(errorOutput);
     }
@@ -31,11 +31,11 @@ export const registerUserThunk = createAsyncThunk(
         password,
         gender,
       });
-      toast.success("Account created successfully!!");
+      toast.success("Account created successfully!");
       return response.data;
     } catch (error) {
       console.error(error);
-      const errorOutput = error?.response?.data?.errMessage;
+      const errorOutput = error?.response?.data?.message || "Registration failed";
       toast.error(errorOutput);
       return rejectWithValue(errorOutput);
     }
@@ -46,12 +46,12 @@ export const logoutUserThunk = createAsyncThunk(
   "user/logout",
   async (_, { rejectWithValue }) => {
     try {
-      const response = await axiosInstance.post("/user/logout");
-      toast.success("Logout successfull!!");
-      return response.data;
+      sessionStorage.removeItem("token");
+      toast.success("Logout successful!");
+      return { success: true };
     } catch (error) {
       console.error(error);
-      const errorOutput = error?.response?.data?.errMessage;
+      const errorOutput = error?.response?.data?.message || "Logout failed";
       toast.error(errorOutput);
       return rejectWithValue(errorOutput);
     }
@@ -62,12 +62,11 @@ export const getUserProfileThunk = createAsyncThunk(
   "user/getProfile",
   async (_, { rejectWithValue }) => {
     try {
-      const response = await axiosInstance.get("/user/get-profile");
+      const response = await axiosInstance.get("/user/profile");
       return response.data;
     } catch (error) {
       console.error(error);
-      const errorOutput = error?.response?.data?.errMessage;
-      // toast.error(errorOutput);
+      const errorOutput = error?.response?.data?.message || "Failed to get profile";
       return rejectWithValue(errorOutput);
     }
   }
@@ -77,12 +76,11 @@ export const getOtherUsersThunk = createAsyncThunk(
   "user/getOtherUsers",
   async (_, { rejectWithValue }) => {
     try {
-      const response = await axiosInstance.get("/user/get-other-users");
+      const response = await axiosInstance.get("/user/users");
       return response.data;
     } catch (error) {
       console.error(error);
-      const errorOutput = error?.response?.data?.errMessage;
-      // toast.error(errorOutput);
+      const errorOutput = error?.response?.data?.message || "Failed to get users";
       return rejectWithValue(errorOutput);
     }
   }

@@ -1,8 +1,8 @@
 import { PutCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
-import dynamoDB from "../db/dynamodb.config.js";
+import { docClient as dynamoDB } from "../db/config/dynamodb.config.js";
 import { v4 as uuidv4 } from "uuid";
 
-const TableName = process.env.DYNAMODB_TABLE_PREFIX + "Messages";
+const TableName = (process.env.DYNAMODB_TABLE_PREFIX || "chitchat_") + "Messages";
 
 export const createMessage = async (messageData) => {
   const messageId = uuidv4();
